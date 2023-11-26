@@ -69,6 +69,35 @@ class NERDataset(Dataset):
             l += [label] * len(word)
         return ts, l
 
+# decoder
+class NERDecoder:
+    def __init__(self, tokenizer, id2labels):
+        self.tokenizer = tokenizer
+        self.id2labels = id2labels
+    def decode(self, item):
+        ids, mask, targets = item.values()
+
+        seq = []
+        last_seq = []
+        lv = None
+        for i in range(mask.shape[0]):
+            if mask[i]:
+                v = targets[i]
+                if lv is None:
+                    last_seq = [ids[i]]
+                    lv = v
+                elif lv != v:
+                    seq.append((self.tokenizer.decode(last_seq), self.id2labels[lv.item()]))
+                    last_seq = [ids[i]]
+                    lv = v
+                else:
+                    last_seq.append(ids[i])
+        
+        seq.append((self.tokenizer.decode(last_seq), self.id2labels[lv.item()]))
+        return seq
+    def accuracy(self, item, pred):
+        raise NotImplementedError
+
 def training_loop(model, dataloader, optimizer, device):
     tr_loss, tr_accuracy = 0, 0
     nb_tr_examples, nb_tr_steps = 0, 0
